@@ -11,7 +11,6 @@ import com.hotel.booking.repository.BookingRepository;
 import com.hotel.booking.repository.InventoryRepository;
 import com.hotel.booking.repository.PropertyRepository;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -23,16 +22,13 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final InventoryRepository inventoryRepository;
     private final PricingStrategy pricingStrategy;
-    private final Clock clock;
 
     public BookingService(PropertyRepository propertyRepository, BookingRepository bookingRepository,
-                          InventoryRepository inventoryRepository, PricingStrategy pricingStrategy,
-                          Clock clock) {
+                          InventoryRepository inventoryRepository, PricingStrategy pricingStrategy) {
         this.propertyRepository = propertyRepository;
         this.bookingRepository = bookingRepository;
         this.inventoryRepository = inventoryRepository;
         this.pricingStrategy = pricingStrategy;
-        this.clock = clock;
     }
 
     public Booking book(BookingCommand request) {
@@ -47,7 +43,7 @@ public class BookingService {
             throw new RoomNotAvailableException("No " + roomType.name() + " room available for the requested dates");
         }
         return bookingRepository.save(Booking.create(property.id(), roomType.id(), request.guestName(),
-                request.stay(), request.guests(), price, Instant.now(clock)));
+                request.stay(), request.guests(), price, Instant.now()));
     }
 
     public Booking get(String bookingId) {
@@ -76,7 +72,7 @@ public class BookingService {
     }
 
     private void validate(BookingCommand request, RoomType roomType) {
-        if (request.stay().checkIn().isBefore(LocalDate.now(clock))) {
+        if (request.stay().checkIn().isBefore(LocalDate.now())) {
             throw new InvalidRequestException("checkIn must not be in the past");
         }
         if (request.guests() > roomType.capacity()) {

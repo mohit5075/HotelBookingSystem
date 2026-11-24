@@ -48,8 +48,7 @@ class PaymentServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(cardStrategy.method()).thenReturn(PaymentMethod.CARD);
-        paymentService = new PaymentService(paymentRepository, bookingService, List.of(cardStrategy),
-                TestSetup.fixedClock());
+        paymentService = new PaymentService(paymentRepository, bookingService, List.of(cardStrategy));
         booking = Booking.create("p1", "r1", "Rohan", TestSetup.stay(5, 7), 2, AMOUNT, Instant.now());
         lenient().when(bookingService.get(booking.id())).thenReturn(booking);
     }

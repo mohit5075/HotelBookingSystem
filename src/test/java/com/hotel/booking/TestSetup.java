@@ -35,18 +35,14 @@ import com.hotel.booking.service.PaymentService;
 import com.hotel.booking.service.PropertyService;
 import com.hotel.booking.service.SearchService;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
 public final class TestSetup {
 
-    public static final LocalDate TODAY = LocalDate.of(2030, 1, 1);
+    public static final LocalDate TODAY = LocalDate.now();
 
-    public final Clock clock = fixedClock();
     public final PropertyRepository propertyRepository = new InMemoryPropertyRepository();
     public final InventoryRepository inventoryRepository = new InMemoryInventoryRepository();
     public final PricingStrategy pricing = new DefaultPricingStrategy();
@@ -54,24 +50,20 @@ public final class TestSetup {
     public final OwnerService ownerService = new OwnerService(new InMemoryOwnerRepository());
     public final PropertyService propertyService = new PropertyService(propertyRepository, ownerService);
     public final BookingService bookingService = new BookingService(propertyRepository,
-            new InMemoryBookingRepository(), inventoryRepository, pricing, clock);
+            new InMemoryBookingRepository(), inventoryRepository, pricing);
     public final PaymentService paymentService;
     public final CancellationService cancellationService;
     public final SearchService searchService;
 
     public TestSetup() {
         paymentService = new PaymentService(new InMemoryPaymentRepository(), bookingService,
-                List.of(new CardPaymentStrategy(), new UpiPaymentStrategy(), new WalletPaymentStrategy()), clock);
+                List.of(new CardPaymentStrategy(), new UpiPaymentStrategy(), new WalletPaymentStrategy()));
         cancellationService = new CancellationService(bookingService, paymentService,
-                new TimeBasedRefundPolicy(clock));
+                new TimeBasedRefundPolicy());
         final List<SearchFilter> filters = List.of(new CityFilter(), new LocalityFilter(), new StarRatingFilter(),
                 new AmenitiesFilter(), new CapacityFilter(), new PriceRangeFilter(pricing),
                 new AvailabilityFilter(inventoryRepository));
         searchService = new SearchService(propertyRepository, filters, pricing);
-    }
-
-    public static Clock fixedClock() {
-        return Clock.fixed(Instant.parse("2030-01-01T10:00:00Z"), ZoneOffset.UTC);
     }
 
     public static DateRange stay(int fromDay, int toDay) {

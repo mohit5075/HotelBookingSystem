@@ -13,7 +13,6 @@ import com.hotel.booking.payment.PaymentStrategy;
 import com.hotel.booking.payment.PaymentResult;
 import com.hotel.booking.repository.PaymentRepository;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.List;
@@ -31,21 +30,14 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final BookingService bookingService;
     private final Map<PaymentMethod, PaymentStrategy> strategies = new EnumMap<>(PaymentMethod.class);
-    private final Clock clock;
 
     public PaymentService(PaymentRepository paymentRepository, BookingService bookingService,
-                          List<PaymentStrategy> availableStrategies, Clock clock) {
+                          List<PaymentStrategy> availableStrategies) {
         this.paymentRepository = paymentRepository;
         this.bookingService = bookingService;
         availableStrategies.forEach(strategy -> strategies.put(strategy.method(), strategy));
-        this.clock = clock;
     }
 
-    /**
-     * Charges a booking that is waiting for payment. Success confirms it; failure marks it
-     * PAYMENT_FAILED and releases its rooms. Repeating a call with the same idempotency key
-     * returns the first payment instead of charging again.
-     */
     public Payment pay(String bookingId, String idempotencyKey, PaymentMethod method, String instrument) {
         Booking booking = bookingService.get(bookingId);
 
@@ -62,7 +54,7 @@ public class PaymentService {
 
             PaymentResult result = strategyFor(method).charge(instrument, booking.totalAmount());
             Payment payment = paymentRepository.save(Payment.create(bookingId, booking.totalAmount(), method,
-                    idempotencyKey, result.reference(), result.success(), Instant.now(clock)));
+                    idempotencyKey, result.reference(), result.success(), Instant.now()));
 
             if (result.success()) {
                 bookingService.confirm(bookingId);

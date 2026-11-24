@@ -8,13 +8,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Repository;
 
-/**
- * Keeps a count of rooms held per room type per night. The outer ConcurrentHashMap lets different
- * room types be handled in parallel; each room type's own map is guarded by a lock on itself, so the
- * check-and-hold in {@code tryReserve} cannot interleave with another request for the same room type.
- * That only works inside one JVM: with several application instances this needs a database-level
- * guarantee (for example a conditional UPDATE or a row lock).
- */
 @Repository
 public class InMemoryInventoryRepository implements InventoryRepository {
 

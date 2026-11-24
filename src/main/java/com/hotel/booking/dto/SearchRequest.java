@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.Set;
 import org.springframework.format.annotation.DateTimeFormat;
 
-/** Query-string parameters of the property search. Dates are ISO (yyyy-MM-dd). */
+/**Dates are ISO (yyyy-MM-dd).*/
 public record SearchRequest(
         String city,
         String locality,
