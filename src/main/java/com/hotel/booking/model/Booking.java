@@ -21,11 +21,11 @@ public final class Booking {
     private Booking(String propertyId, String roomTypeId, String guestName,
                     DateRange stay, int guests, BigDecimal totalAmount, Instant createdAt) {
         this.id = UUID.randomUUID().toString();
-        this.propertyId = Checks.text(propertyId, "propertyId");
-        this.roomTypeId = Checks.text(roomTypeId, "roomTypeId");
-        this.guestName = Checks.text(guestName, "guestName");
+        this.propertyId = propertyId;
+        this.roomTypeId = roomTypeId;
+        this.guestName = guestName;
         this.stay = stay;
-        this.guests = Checks.atLeast(guests, 1, "guests");
+        this.guests = guests;
         this.totalAmount = totalAmount;
         this.createdAt = createdAt;
     }

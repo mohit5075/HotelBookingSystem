@@ -1194,54 +1194,6 @@
           ]
         },
         {
-          "name": "Pay - bad UPI id (400)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/payments",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings",
-                "{{bookingId}}",
-                "payments"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"method\": \"UPI\",\n  \"instrument\": \"nope\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
-                ]
-              }
-            }
-          ]
-        },
-        {
           "name": "Get booking - unknown (404)",
           "request": {
             "method": "GET",

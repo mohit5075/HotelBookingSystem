@@ -1,6 +1,5 @@
 package com.hotel.booking.payment;
 
-import com.hotel.booking.exception.InvalidRequestException;
 import com.hotel.booking.model.PaymentMethod;
 import org.springframework.stereotype.Component;
 
@@ -20,9 +19,6 @@ public class WalletPaymentProcessor implements PaymentProcessor {
 
     @Override
     public PaymentResult process(ChargeRequest request) {
-        if (request.instrument().isBlank()) {
-            throw new InvalidRequestException("Wallet payments need a wallet id");
-        }
         return gateway.charge(request);
     }
 }

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.hotel.booking.exception.ConflictException;
 import com.hotel.booking.exception.InvalidBookingStateException;
-import com.hotel.booking.exception.InvalidRequestException;
 import com.hotel.booking.exception.RoomNotAvailableException;
 import com.hotel.booking.model.Booking;
 import com.hotel.booking.model.BookingStatus;
@@ -70,14 +69,6 @@ class PaymentServiceTest {
 
         assertThatThrownBy(() -> f.paymentService.pay(booking.id(), "k2", PaymentMethod.CARD, "tok_abc"))
                 .isInstanceOf(InvalidBookingStateException.class);
-    }
-
-    @Test
-    void badInstrumentLeavesBookingPending() {
-        assertThatThrownBy(() -> f.paymentService.pay(booking.id(), "k1", PaymentMethod.UPI, "not-a-upi-id"))
-                .isInstanceOf(InvalidRequestException.class);
-
-        assertThat(f.bookingService.get(booking.id()).status()).isEqualTo(BookingStatus.PENDING_PAYMENT);
     }
 
     @Test

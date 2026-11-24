@@ -6,7 +6,7 @@ All data is in memory behind repository interfaces.
 ## Build and run
 
 ```
-mvn clean test              # build + 33 unit/integration tests
+mvn clean test              # build + 32 unit/integration tests
 mvn spring-boot:run         # http://localhost:8080
 ```
 
@@ -26,7 +26,7 @@ Pricing strategy: `hotel.pricing.strategy=base|weekend` in `application.properti
 | Cancel | `POST /api/bookings/{id}/cancel` |
 | Get booking | `GET /api/bookings/{id}` |
 
-Instruments: card = token `tok_...`, UPI = `name@bank`, wallet = any id. The mock gateway declines any instrument containing `decline`.
+`instrument` is a card token, UPI id or wallet id (any string; the mock gateway declines any value containing `decline`).
 Errors use RFC 7807 problem details: 400 validation, 404 not found, 409 conflict (sold out, invalid state, idempotency).
 
 ## Key design decisions
