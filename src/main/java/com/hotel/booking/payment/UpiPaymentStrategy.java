@@ -1,0 +1,13 @@
+package com.hotel.booking.payment;
+
+import com.hotel.booking.model.PaymentMethod;
+import org.springframework.stereotype.Component;
+
+@Component
+public class UpiPaymentStrategy extends MockPaymentStrategy {
+
+    @Override
+    public PaymentMethod method() {
+        return PaymentMethod.UPI;
+    }
+}
