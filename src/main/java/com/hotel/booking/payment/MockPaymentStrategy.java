@@ -3,7 +3,6 @@ package com.hotel.booking.payment;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-/** Stand-in for a real provider: approves everything except instruments containing "decline". */
 public abstract class MockPaymentStrategy implements PaymentStrategy {
 
     @Override

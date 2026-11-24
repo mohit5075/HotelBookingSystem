@@ -5,7 +5,6 @@ import com.hotel.booking.model.RoomType;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/** Decides what a stay costs. Swap implementations for dynamic pricing. */
 public interface PricingStrategy {
 
     BigDecimal totalPrice(RoomType roomType, DateRange stay);
