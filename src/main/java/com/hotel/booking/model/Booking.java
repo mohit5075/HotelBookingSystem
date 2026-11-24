@@ -50,7 +50,7 @@ public final class Booking {
     }
 
     public void assertCancellable() {
-        if (!status.canTransitionTo(BookingStatus.CANCELLED)) {
+        if (!status.canBeCancelled()) {
             throw invalidTransition(BookingStatus.CANCELLED);
         }
     }
@@ -64,7 +64,7 @@ public final class Booking {
 
     private InvalidBookingStateException invalidTransition(BookingStatus next) {
         return new InvalidBookingStateException(
-                "Booking " + id + " cannot move from " + status + " to " + next);
+                "Booking " + id + " is " + status.label() + " and cannot be changed to " + next.label());
     }
 
     public String id() {
