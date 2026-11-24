@@ -7,14 +7,9 @@ import com.hotel.booking.model.Location;
 import com.hotel.booking.model.Owner;
 import com.hotel.booking.model.Property;
 import com.hotel.booking.model.RoomType;
-import com.hotel.booking.payment.CardPaymentProcessor;
-import com.hotel.booking.payment.ChargeRequest;
-import com.hotel.booking.payment.MockPaymentGateway;
-import com.hotel.booking.payment.PaymentGateway;
-import com.hotel.booking.payment.PaymentProcessorRegistry;
-import com.hotel.booking.payment.PaymentResult;
-import com.hotel.booking.payment.UpiPaymentProcessor;
-import com.hotel.booking.payment.WalletPaymentProcessor;
+import com.hotel.booking.payment.CardPaymentStrategy;
+import com.hotel.booking.payment.UpiPaymentStrategy;
+import com.hotel.booking.payment.WalletPaymentStrategy;
 import com.hotel.booking.pricing.DefaultPricingStrategy;
 import com.hotel.booking.pricing.PricingStrategy;
 import com.hotel.booking.repository.InventoryRepository;
@@ -34,7 +29,6 @@ import com.hotel.booking.search.filter.PriceRangeFilter;
 import com.hotel.booking.search.filter.StarRatingFilter;
 import com.hotel.booking.service.BookingService;
 import com.hotel.booking.service.CancellationService;
-import com.hotel.booking.service.StripedLock;
 import com.hotel.booking.service.BookingCommand;
 import com.hotel.booking.service.OwnerService;
 import com.hotel.booking.service.PaymentService;
@@ -47,23 +41,14 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class TestSetup {
 
     public static final LocalDate TODAY = LocalDate.of(2030, 1, 1);
 
-    public final Clock clock = Clock.fixed(Instant.parse("2030-01-01T10:00:00Z"), ZoneOffset.UTC);
+    public final Clock clock = fixedClock();
     public final PropertyRepository propertyRepository = new InMemoryPropertyRepository();
     public final InventoryRepository inventoryRepository = new InMemoryInventoryRepository();
-    public final AtomicInteger chargeCount = new AtomicInteger();
-    public final PaymentGateway gateway = new MockPaymentGateway() {
-        @Override
-        public PaymentResult charge(ChargeRequest request) {
-            chargeCount.incrementAndGet();
-            return super.charge(request);
-        }
-    };
     public final PricingStrategy pricing = new DefaultPricingStrategy();
 
     public final OwnerService ownerService = new OwnerService(new InMemoryOwnerRepository());
@@ -75,18 +60,18 @@ public final class TestSetup {
     public final SearchService searchService;
 
     public TestSetup() {
-        final StripedLock lock = new StripedLock();
-        final PaymentProcessorRegistry registry = new PaymentProcessorRegistry(List.of(
-                new CardPaymentProcessor(gateway), new UpiPaymentProcessor(gateway),
-                new WalletPaymentProcessor(gateway)));
-        paymentService = new PaymentService(new InMemoryPaymentRepository(), bookingService, registry, gateway,
-                lock, clock);
+        paymentService = new PaymentService(new InMemoryPaymentRepository(), bookingService,
+                List.of(new CardPaymentStrategy(), new UpiPaymentStrategy(), new WalletPaymentStrategy()), clock);
         cancellationService = new CancellationService(bookingService, paymentService,
-                new TimeBasedRefundPolicy(clock), lock);
+                new TimeBasedRefundPolicy(clock));
         final List<SearchFilter> filters = List.of(new CityFilter(), new LocalityFilter(), new StarRatingFilter(),
                 new AmenitiesFilter(), new CapacityFilter(), new PriceRangeFilter(pricing),
                 new AvailabilityFilter(inventoryRepository));
         searchService = new SearchService(propertyRepository, filters, pricing);
+    }
+
+    public static Clock fixedClock() {
+        return Clock.fixed(Instant.parse("2030-01-01T10:00:00Z"), ZoneOffset.UTC);
     }
 
     public static DateRange stay(int fromDay, int toDay) {

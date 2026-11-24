@@ -2,86 +2,104 @@ package com.hotel.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
-import com.hotel.booking.cancellation.TimeBasedRefundPolicy;
+import com.hotel.booking.cancellation.RefundPolicy;
 import com.hotel.booking.exception.InvalidBookingStateException;
 import com.hotel.booking.model.Booking;
-import com.hotel.booking.model.BookingStatus;
-import com.hotel.booking.model.PaymentMethod;
-import com.hotel.booking.model.Property;
+import com.hotel.booking.service.BookingService;
+import com.hotel.booking.service.CancellationService;
+import com.hotel.booking.service.PaymentService;
 import java.math.BigDecimal;
 import java.time.Instant;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class CancellationServiceTest {
 
-    private final TestSetup f = new TestSetup();
-    private final Property property = f.propertyWithRooms(1);
+    private static final BigDecimal AMOUNT = new BigDecimal("200");
 
-    private Booking paidBooking(int fromDay) {
-        final Booking booking = f.bookingService.book(f.request(property, TestSetup.stay(fromDay, fromDay + 2), 2));
-        f.paymentService.pay(booking.id(), "key-" + booking.id(), PaymentMethod.CARD, "tok_abc");
-        return booking;
+    @Mock
+    private BookingService bookingService;
+    @Mock
+    private PaymentService paymentService;
+    @Mock
+    private RefundPolicy refundPolicy;
+
+    private CancellationService cancellationService;
+    private Booking booking;
+
+    @BeforeEach
+    void setUp() {
+        cancellationService = new CancellationService(bookingService, paymentService, refundPolicy);
+        booking = Booking.create("p1", "r1", "Rohan", TestSetup.stay(5, 7), 2, AMOUNT, Instant.now());
+        when(bookingService.get(booking.id())).thenReturn(booking);
     }
 
     @Test
-    void fullRefundEarly() {
-        final Booking booking = paidBooking(5);
+    void confirmedBookingIsRefundedFullyAndCancelled() {
+        booking.confirm();
+        when(refundPolicy.refundAmount(booking)).thenReturn(AMOUNT);
 
-        final Booking cancelled = f.cancellationService.cancel(booking.id());
+        cancellationService.cancel(booking.id());
 
-        assertThat(cancelled.status()).isEqualTo(BookingStatus.CANCELLED);
-        assertThat(cancelled.refundAmount()).isEqualByComparingTo("200");
+        verify(paymentService).refund(booking.id(), AMOUNT);
+        verify(bookingService).cancel(booking.id(), AMOUNT);
     }
 
     @Test
-    void halfRefundWithin48h() {
-        // today is 2030-01-01T10:00Z, check-in is 2030-01-03T00:00 => 38 hours away
-        final Booking booking = paidBooking(2);
+    void partialRefundIsPassedThrough() {
+        booking.confirm();
+        BigDecimal half = new BigDecimal("100");
+        when(refundPolicy.refundAmount(booking)).thenReturn(half);
 
-        assertThat(f.cancellationService.cancel(booking.id()).refundAmount()).isEqualByComparingTo("100");
+        cancellationService.cancel(booking.id());
+
+        verify(paymentService).refund(booking.id(), half);
+        verify(bookingService).cancel(booking.id(), half);
     }
 
     @Test
-    void noRefundWithin24h() {
-        final Booking booking = paidBooking(1);
+    void noRefundWhenPolicyReturnsZero() {
+        booking.confirm();
+        when(refundPolicy.refundAmount(booking)).thenReturn(BigDecimal.ZERO);
 
-        assertThat(f.cancellationService.cancel(booking.id()).refundAmount()).isEqualByComparingTo("0");
+        cancellationService.cancel(booking.id());
+
+        verify(paymentService, never()).refund(any(), any());
+        verify(bookingService).cancel(booking.id(), BigDecimal.ZERO);
     }
 
     @Test
-    void cancelFreesRoom() {
-        final Booking booking = paidBooking(5);
-        f.cancellationService.cancel(booking.id());
+    void unpaidBookingIsCancelledWithoutRefund() {
+        cancellationService.cancel(booking.id());
 
-        assertThat(f.bookingService.book(f.request(property, TestSetup.stay(5, 7), 2)).status())
-                .isEqualTo(BookingStatus.PENDING_PAYMENT);
+        verifyNoInteractions(refundPolicy, paymentService);
+        verify(bookingService).cancel(booking.id(), BigDecimal.ZERO);
     }
 
     @Test
-    void unpaidCancelHasNoRefund() {
-        final Booking booking = f.bookingService.book(f.request(property, TestSetup.stay(5, 7), 2));
+    void cancellingTwiceFailsWithoutRefundingAgain() {
+        booking.cancel(BigDecimal.ZERO);
 
-        final Booking cancelled = f.cancellationService.cancel(booking.id());
-
-        assertThat(cancelled.status()).isEqualTo(BookingStatus.CANCELLED);
-        assertThat(cancelled.refundAmount()).isEqualByComparingTo("0");
-    }
-
-    @Test
-    void cannotCancelTwice() {
-        final Booking booking = paidBooking(5);
-        f.cancellationService.cancel(booking.id());
-
-        assertThatThrownBy(() -> f.cancellationService.cancel(booking.id()))
+        assertThatThrownBy(() -> cancellationService.cancel(booking.id()))
                 .isInstanceOf(InvalidBookingStateException.class);
+        verifyNoInteractions(refundPolicy, paymentService);
+        verify(bookingService, never()).cancel(any(), any());
     }
 
     @Test
-    void noRefundAfterCheckIn() {
-        final Booking started = Booking.create("p", "r", "Rohan", TestSetup.stay(-1, 2), 2, new BigDecimal("300"),
-                Instant.now());
+    void returnsWhatBookingServiceReturns() {
+        when(bookingService.cancel(booking.id(), BigDecimal.ZERO)).thenReturn(booking);
 
-        assertThat(new TimeBasedRefundPolicy(f.clock).refundAmount(started)).isEqualByComparingTo("0");
+        assertThat(cancellationService.cancel(booking.id())).isSameAs(booking);
     }
 }
